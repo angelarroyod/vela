@@ -1,142 +1,149 @@
-# Vela — Independent Nursing Care App (design spec)
+# Vela — Independent Nursing Care App (product design spec)
 
-**Date:** 2026-06-26
-**Source:** Claude Design handoff `independent-nursing-care-app/project/Vela.dc.html` (9-phone canvas).
-**Goal:** Recreate the design pixel-faithfully as a navigable Expo (React Native + TypeScript) prototype.
+**Date:** 2026-06-26 (rev 2 — full product scope)
+**Source design:** Claude Design handoff `Vela.dc.html` (9-phone canvas).
+**Goal:** Ship a **complete, functional** home nursing-care app built to satisfy Apple App Store Review Guidelines, ready for TestFlight/submission via EAS.
+
+## 0. Reality & constraints (read first)
+
+- **No approval guarantee.** Apple review is discretionary. This spec maximizes guideline compliance and prepares submission; it cannot promise acceptance.
+- **Windows dev host → no Xcode.** All iOS builds go through **EAS Build** (Expo cloud). No Mac required.
+- **Apple Developer Program not yet held.** We build + produce a TestFlight/submission-ready binary and metadata; the paid `eas submit` step is deferred until the user enrolls ($99/yr, 24–48h identity check).
+- **Secrets:** Supabase **anon** key ships in the app (public-safe; RLS is the security boundary). The **service-role** key never goes in the client — server-only (Edge Functions). No secrets committed to git.
 
 ## 1. Overview
 
-Vela is a bilingual-feeling (Spanish copy) home nursing-care app with **two roles sharing one app**:
+Two roles share one app around a patient:
+- **Nurse** records vitals, medication, notes/anomalies, and shift handoff.
+- **Family** follows the patient's status, activity feed, and chats with the nurse — **live**.
 
-- **Nurse (enfermera)** — Carmen registers care during the night shift for patient Elena.
-- **Family (familiar)** — Lucía follows her mother's status in real time.
+Access is patient-scoped: a user only sees patients they're a member of, with role-based write permissions.
 
-The prototype reproduces all 9 designed screens with working navigation and static mock data. No backend, no auth, no persistence.
+### In scope (full app)
+9 designed screens + the surfaces an App-Store app requires: auth/onboarding, account & settings (incl. **account deletion**), family **invite/join**, real data entry (vitals, meds, messages, handoff), **realtime sync**, **push notifications**, privacy policy + consent, medical disclaimer, loading/empty/error states, accessibility, Spanish localization.
 
-### Goals
-- Pixel-faithful match to the canvas: spacing, colors, radii, shadows, SVG icons, Spanish copy verbatim.
-- Working navigation: role pick → role tab navigators; back arrows pop; CTAs route.
-- Runnable on Windows via Expo (web preview primary; Expo Go secondary).
+### Out of scope (now)
+Web/Android release (Expo supports them later), telehealth/video, billing/insurance, EHR integrations, wearable ingestion, AI features.
 
-### Non-goals (YAGNI)
-- No real data/API, auth, forms that submit, or local DB.
-- No dark mode, i18n switcher, animations beyond what the design implies, or tests of business logic (it has none).
-- Do not port `support.js` (it's the Claude Design canvas runtime, irrelevant to the app).
+## 2. Stack
 
-## 2. Tech stack
+- **Expo SDK 54+ / React Native / TypeScript**, **expo-router**.
+- **Supabase**: Postgres, Auth (email/password + Apple), Realtime, Storage (avatars), Edge Functions (push fan-out, account deletion).
+- **expo-apple-authentication** + Supabase Apple identity; **expo-notifications** (Expo Push → APNs); **expo-secure-store** (session); **react-native-svg**; **expo-linear-gradient**; **@expo-google-fonts/hanken-grotesk** + **instrument-serif**.
+- **EAS Build/Submit** for release.
+- State/data: **@tanstack/react-query** over `@supabase/supabase-js`; light `zustand` for session/UI.
 
-- **Expo SDK 54+**, **expo-router** (file-based routing), **TypeScript**.
-- **react-native-svg** for all icons (the design uses inline SVG).
-- Fonts via **@expo-google-fonts/hanken-grotesk** + **@expo-google-fonts/instrument-serif** (loaded with `expo-font` / `useFonts`).
-- **react-native-safe-area-context** (already implied by phone frame; faux status bar is part of the design).
-- Web preview through `react-native-web` (Expo default).
+## 3. Data model (Postgres)
 
-## 3. Navigation architecture
+- `profiles` — 1:1 with `auth.users`: `id`, `full_name`, `avatar_url`, `locale`, `created_at`.
+- `patients` — `id`, `full_name`, `age`, `room`, `status` (estable/observación/…), `dob`, `notes`.
+- `care_memberships` — `patient_id`, `profile_id`, `role` (`nurse`|`family`|`doctor`), `relationship`, `is_primary`, `shift` (day/night, nurses). **Access-control join table.**
+- `vitals` — `patient_id`, `recorded_by`, `bp_sys`, `bp_dia`, `hr`, `temp_c`, `spo2`, `taken_at`, `note`, `has_anomaly`.
+- `medications` — `patient_id`, `name`, `dose`, `reason`, `scheduled_at`, `status` (`pending`|`administered`|`skipped`), `administered_by`, `administered_at`.
+- `care_events` — `patient_id`, `author_id`, `type` (`vitals`|`medication`|`note`|`anomaly`|`position`|`settle`), `title`, `body`, `severity` (`info`|`warning`), `occurred_at`. Powers Activity feed + Relevo timeline.
+- `messages` — `patient_id`, `sender_id`, `body`, `created_at`, `read_at`.
+- `shift_handoffs` — `patient_id`, `nurse_id`, `summary`, `recommendation`, `started_at`, `ended_at`.
+- `invites` — `patient_id`, `email`, `role`, `token`, `invited_by`, `accepted_at`, `expires_at`.
+- `push_tokens` — `profile_id`, `token`, `platform`, `updated_at`.
 
-Root **Stack** → Welcome role-picker → one of two **Tab** groups.
+### Row-Level Security (the security boundary)
+- Helper: `is_member(patient_id, auth.uid())` via `care_memberships`.
+- **Read:** any member of the patient can read that patient's `patients`, `vitals`, `medications`, `care_events`, `messages`, `shift_handoffs`.
+- **Write:** `vitals`/`medications`/`care_events`/`shift_handoffs` insert/update gated to members with `role = 'nurse'`. `messages` insert gated to any member (sender = self). `invites` insert gated to `is_primary` member. `profiles`/`push_tokens` row owned by self.
+- No table is world-readable. Anon key + RLS only.
+
+## 4. Auth & onboarding
+
+- **Welcome (00)** → choose role → **Sign up / Log in** (email/password + **Sign in with Apple**). Consent checkbox links Privacy Policy + medical disclaimer at signup.
+- First nurse for a patient creates/links the patient record (or is assigned). **Family joins via invite** (email + token deep link, `expo-linking`).
+- Session persisted in `expo-secure-store`; auto-refresh; protected route groups redirect unauthenticated users to Welcome.
+- **Account deletion** (Settings): Edge Function deletes `auth.users` row → cascades app data; confirm dialog; required by Guideline 5.1.1(v).
+
+## 5. Navigation architecture
+
+Root **Stack**: `(auth)` group (welcome/login/signup/join) and `(app)` group gated by session. Inside `(app)`, role determines which tab group renders.
 
 ```
 app/
-  _layout.tsx              # root Stack; load fonts here; initial route = index
-  index.tsx                # 00 Bienvenida — role picker, routes to nurse/family
-  nurse/
-    _layout.tsx            # Stack wrapping the nurse tabs + pushed detail screen
-    (tabs)/
-      _layout.tsx          # Tabs: Inicio · Signos · Relevo · Perfil
-      inicio.tsx           # 01 Inicio del turno
-      signos.tsx           # 02 Signos vitales
-      relevo.tsx           # 04 Relevo de turno
-      perfil.tsx           # nurse profile (see §6 gap resolution)
-    medicacion.tsx         # 03 Medicación — PUSHED from Inicio task card (keeps back arrow)
-  family/
-    _layout.tsx            # Stack wrapping the family tabs
-    (tabs)/
-      _layout.tsx          # Tabs: Inicio · Actividad · Mensajes · Perfil
-      inicio.tsx           # 05 Estado de mamá
-      actividad.tsx        # 06 Actividad
-      mensajes.tsx         # 07 Mensajes
-      perfil.tsx           # 08 Perfil de Elena
+  _layout.tsx                 # fonts, query client, session provider, route guard
+  (auth)/
+    welcome.tsx               # 00 Bienvenida (role pick)
+    login.tsx  signup.tsx  join.tsx   # invite accept
+  (app)/
+    _layout.tsx               # session-gated; routes to nurse|family by membership role
+    nurse/
+      _layout.tsx             # Stack (tabs + pushed)
+      (tabs)/_layout.tsx      # Inicio · Signos · Relevo · Perfil
+      inicio.tsx              # 01
+      signos.tsx              # 02 (read + entry form)
+      relevo.tsx              # 04 (compose handoff)
+      perfil.tsx              # nurse profile (minimal real screen)
+      medicacion.tsx          # 03 pushed; administer action
+    family/
+      _layout.tsx
+      (tabs)/_layout.tsx      # Inicio · Actividad · Mensajes · Perfil
+      inicio.tsx  actividad.tsx  mensajes.tsx  perfil.tsx   # 05-08
+    settings/                 # profile, notifications, privacy, delete account
 ```
 
-### Routing rules (from the design)
-- Welcome "Soy enfermera/o" → `/nurse/(tabs)/inicio`. "Soy familiar" → `/family/(tabs)/inicio`.
-- Nurse Inicio CTA "Registrar signos vitales" **and** the "Signos" tab → `signos`.
-- Nurse Inicio "Próximas tareas → Medicación" card → push `/nurse/medicacion` (header back arrow pops).
-- "Entregar turno al equipo de día" (Relevo) → for the prototype, returns to Inicio (no further screen designed).
-- Family chat (Mensajes) back arrow + Mensajes tab both reach the chat screen; back pops to Inicio.
-- Tab bars switch screens; detail back arrows pop. Tab-context screens render no back arrow; pushed screens (Medicación) do.
+### Routing rules (from design)
+Welcome role → auth → role tab group. Nurse Inicio CTA + Signos tab → `signos`; "Próximas tareas → Medicación" → push `medicacion`; Relevo submit → confirm + back to Inicio. Family Mensajes reachable as tab; back pops to Inicio. Signos/Mensajes are **tabs** (no back arrow in tab context); **Medicación** is the lone pushed screen (keeps back arrow).
 
-### Screen-type reconciliation
-The canvas mixes tab screens and pushed detail screens; some screens (02 Signos, 07 Mensajes) show a back arrow yet also appear as a tab. Resolution: treat **Signos** and **Mensajes** as **tabs** (primary), drawn without the back arrow in tab context. Only **Medicación (03)** is a true pushed screen and keeps its back arrow.
+## 6. Real functionality per feature (beyond static design)
 
-## 4. Design tokens (`src/theme.ts`)
+- **Signos vitales:** editable inputs (BP, HR, temp, SpO₂), range validation → status badge, anomaly toggle persists, "Guardar registro" inserts `vitals` + a `care_events` row (and a `warning` event if anomaly).
+- **Medicación:** list from `medications`; tap pending dose → confirm administer → status `administered` + `care_events` + (later) cancels its reminder.
+- **Relevo:** timeline from `care_events`; "Entregar turno" writes `shift_handoffs` (summary+recommendation), marks shift ended.
+- **Family Inicio/Actividad:** live `care_events`/`vitals` via Realtime — nurse entries appear without refresh.
+- **Mensajes:** real send/receive on `messages` (Realtime), read receipts.
+- **Perfil (family):** patient, care team, conditions, emergency contacts; tap phone → `tel:` link.
 
-### Color
-- **Brand greens:** primary `#5C8A77`; deep `#3C6353`; ink `#28332E`; serif-heading `#3C4D45`; body-on-card `#52605A`; gradient pairs welcome `#5C8A77→#41685A`, family hero `#5C8A77→#487062` (and `#487062` deep variant).
-- **Mint fills:** `#E3EFE9`, `#DCEAE3`, `#EAF3EE`; hero-on-green text `#D6ECE1`/`#CFE6DA`; hero dot `#BFE6D2`.
-- **Neutrals/bg:** app bg `#F1F5F2`; chat bg `#EEF3F0`; white `#fff`; chip bg `#F2F6F3`.
-- **Borders:** main `#E7EEE9`; card `#EEF3EF`; chat header `#EAF0EC`; progress track `#EAF0EC`; divider `#F0F4F1`; dashed pending `#D6DEDA` / circle `#C9D3CD`; timeline line `#E2EAE5`.
-- **Muted text:** `#7C8A82`, `#8A968E`, `#A9B4AD`; chevron `#C2CCC6`.
-- **Amber/warning:** accent `#C0913F`; family-role icon `#B07A4E`; anomaly dot `#D6A547`; fills `#F6ECD9`/`#F3EADF`/`#FBF4E6`/`#F2E4C2`; border `#F0E2C4`; texts `#8A6A1E`/`#8A7338`/`#9A7B2E`/`#A88A4A`; strokes `#B58A2E`; timestamps `#B49454`/`#C0A463`; Rosa initials `#A56F42`.
-- **Doctor blue:** `#5E739B` on `#E4E9F0`.
+## 7. Compliance & polish (mandatory workstreams)
 
-### Type
-- Sans: **Hanken Grotesk** (400/500/600/700/800).
-- Serif: **Instrument Serif** (regular + italic) — used for the "Vela" wordmark and large greetings.
-- Key sizes seen: serif 46/40/32/30/25/24; sans 18/17/16/15/14/13/12/11/10 with weights per element.
+- **Privacy:** in-app Privacy Policy + hosted URL; consent at signup; health data not used for ads/tracking (5.1.3); App Privacy "nutrition label" data map prepared.
+- **Medical disclaimer:** record-keeping tool, not a medical device / not for diagnosis; shown at onboarding + Settings.
+- **Account management:** edit profile, notification prefs, sign out, **delete account**.
+- **Permissions:** notifications usage; no camera/location unless added (avatar uses library picker → photo permission string if enabled).
+- **States:** loading skeletons, empty states, error + retry, offline banner (react-query cache).
+- **Accessibility:** VoiceOver labels on icons/buttons, Dynamic Type-friendly sizing, ≥4.5:1 contrast check, hit targets ≥44pt.
+- **Localization:** Spanish primary (`es`); strings centralized for future `en`.
+- **No placeholder/demo content** in shipped build (Guideline 2.1) — real flows, seeded demo account allowed for review notes.
 
-### Geometry / effects
-- Phone frame: **390 × 844**, radius **46**, border `#E7EEE9`, shadow `0 30px 70px rgba(53,94,80,.16)` + `0 4px 14px rgba(53,94,80,.08)`.
-- Cards: radius 16–26; borders `#EEF3EF`; soft shadows `rgba(53,94,80,.04–.08)`.
-- Pills/badges: radius 99; status badge mint `#E3EFE9` + dot `#5C8A77` + text `#3C6353`.
-- Primary button: height 56, radius 18, bg `#5C8A77`, shadow `0 10px 24px rgba(92,138,119,.34)`, white 700/16 text, optional leading icon.
-- Status bar: 54 tall; icon color `#fff` on green screens else `#28332E`.
-- Tab bar: 80 tall, white, border-top `#EEF3EF`; active `#5C8A77`, inactive `#A9B4AD`.
+## 8. Push notifications
+`expo-notifications` registers device → `push_tokens`. Triggers: medication reminders (scheduled) and family anomaly alerts (on `warning` `care_events`). Fan-out via Supabase Edge Function → Expo Push API → APNs. Requires APNs key (Apple account) at release; built behind a feature flag until then.
 
-> RN mapping: CSS `box-shadow` → iOS `shadowColor/Opacity/Radius/Offset` + Android `elevation`; gradients → `expo-linear-gradient`; `font:700 16px` shorthand → explicit `fontFamily`/`fontWeight`/`fontSize`.
+## 9. Design system
 
-## 5. Shared components (`src/components/`)
+Tokens, components, fidelity targets, and the nurse-Perfil gap resolution are unchanged from rev 1 §4–§6 (Hanken Grotesk / Instrument Serif; green `#5C8A77` system; 390×844 frame on web, full-bleed + safe-area on device; SVG icons ported 1:1). All screen copy/colors/spacing match the canvas.
 
-- `PhoneFrame` — 390-wide rounded frame, shadow, background color prop; clips content. (For web preview; on device it fills the screen.)
-- `StatusBar` — time string + signal/wifi/battery SVGs; `tint` prop (light/dark).
-- `TabBar` — driven by expo-router `Tabs`; 4 items with SVG icon + label, active/inactive tint.
-- `Card`, `Pill`, `StatusBadge` (mint "Estable"/"Normal").
-- `PrimaryButton` — green CTA with optional leading icon.
-- `Avatar` — initials chip with configurable bg/fg (CM, L, E, RG, DM).
-- `Icon` — central `react-native-svg` icon set ported 1:1 from the canvas: drop (logo), activity/pulse line, heart, pill, clipboard, home, user, message, send, check, plus, chevron-left/right, warning-triangle, bell, phone, lightbulb, signal/wifi/battery.
+## 10. Milestone roadmap
 
-## 6. Gap resolution — nurse "Perfil" tab
+- **M1 — Foundation:** Expo scaffold, theme, components, all 9 screens with real navigation + mock data placeholder. *Runnable on Windows (web + Expo Go).*
+- **M2 — Backend + auth:** Supabase project, schema + RLS migrations, email/password + Apple auth, onboarding, invite/join, account deletion.
+- **M3 — Live data:** wire screens to Supabase, react-query, Realtime sync, entry forms (vitals/meds/messages/handoff).
+- **M4 — Compliance & polish:** privacy/consent/disclaimer, settings, push, states, accessibility, localization, icons/splash.
+- **M5 — Release prep:** bundle id, `app.json`, `eas.json` (dev/preview/production + submit placeholder), iOS EAS build, TestFlight + App Store Connect metadata/screenshots draft. **`eas submit` deferred** to user's Apple account.
 
-The nurse tab bar includes a **Perfil** tab but the canvas has **no nurse profile mockup**. **Decision (approved):** build a minimal nurse Perfil reusing theme components — Carmen avatar (CM), role "Enfermera · turno de noche", shift "22:00 – 06:00", assigned patient (Elena), and a "Cerrar sesión" row. Visual language matches existing cards; nothing invented beyond layout.
+## 11. Release engineering (M5 detail)
+- `app.json`: name "Vela", slug, bundle id `com.<owner>.vela`, icon/splash, `infoPlist` usage strings, `supportsTablet:false` (iPhone), `userInterfaceStyle`.
+- `eas.json`: build profiles; `production` for store; submit config stubbed (`ascAppId`, `appleTeamId` filled when enrolled).
+- Build: `eas build -p ios --profile production` (cloud). Distribute via TestFlight first.
+- App Store Connect: privacy answers, age rating, screenshots (from EAS build/simulator), review notes incl. demo credentials.
 
-## 7. Mock data (`src/data.ts`)
-
-Single static module exporting typed fixtures used across screens (keeps copy/numbers consistent):
-- `patient` (Elena Rivas, 78, Habitación principal, Estable, conditions, allergy).
-- `nurse` (Carmen Morales, night shift), `family` (Lucía Rivas), `careTeam` (Carmen/Rosa/Dr. Méndez), `contacts`.
-- `vitals` (PA 128/82, FC 72, T 36.7, SpO₂ 97, all Normal, control 00:00/00:02).
-- `medications` (Amlodipino, Atorvastatina, Losartán, Levotiroxina with times/status; "4 de 5", 80%).
-- `relevoTimeline` (4 entries incl. amber anomaly 01:15), `recommendation`.
-- `activityFeed` (4 entries), `messages` (4-bubble thread).
-
-## 8. Fidelity notes
-- Spanish copy reproduced exactly (incl. emojis 🌙 💊 🙏, "SpO₂", "°C", accents).
-- Per-screen status-bar times preserved (21:30, 23:14, 00:02, 23:44, 05:48, 23:42, 23:43, 23:44, 23:46).
-- The canvas section headers ("Bienvenida"/"Para la enfermera"/"Para la familia") are presentation chrome, not app UI — omitted from the running app.
-
-## 9. Running
-- `cd vela && npx expo start` → press `w` for web (primary on Windows), or scan QR in Expo Go.
-- Web frame renders the 390×844 phone; on a device it fills the screen with safe-area padding.
-
-## 10. File structure (target)
+## 12. File structure (target)
 ```
 vela/
-  app/                 # routes (see §3)
+  app/                  # routes (§5)
   src/
-    theme.ts           # tokens (§4)
-    data.ts            # mock fixtures (§7)
-    components/        # shared UI (§5)
-  assets/
-  app.json, package.json, tsconfig.json
+    theme.ts            # tokens
+    components/         # shared UI
+    lib/supabase.ts     # client (anon key from env)
+    features/{vitals,meds,events,messages,handoff,auth}/   # hooks + queries
+    i18n/es.ts
+  supabase/
+    migrations/*.sql    # schema + RLS
+    functions/          # push fan-out, delete-account
+  assets/               # icon, splash, fonts
+  app.json  eas.json  package.json  tsconfig.json  .env.example
   docs/superpowers/specs/2026-06-26-vela-design.md
 ```
