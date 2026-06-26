@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
-import { PhoneFrame } from '@/components/PhoneFrame';
 import { StatusBar } from '@/components/StatusBar';
 import { Icon, type IconName } from '@/components/Icon';
 import { colors, font, fontFamilyForWeight } from '@/theme';
@@ -43,7 +42,7 @@ export default function Welcome() {
   const topPad = Platform.OS === 'web' ? 0 : insets.top;
 
   return (
-    <PhoneFrame bg={colors.white}>
+    <View style={s.screen}>
       <LinearGradient colors={[...colors.gradWelcome]} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={s.header}>
         <View style={{ paddingTop: topPad }}>
           <StatusBar time="21:30" tint="light" />
@@ -80,11 +79,12 @@ export default function Welcome() {
           <Text style={s.footerLink}>Iniciar sesión</Text>
         </View>
       </ScrollView>
-    </PhoneFrame>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.white },
   header: { paddingBottom: 36 },
   hero: { alignItems: 'center', paddingHorizontal: 30, paddingTop: 30 },
   logoTile: {
