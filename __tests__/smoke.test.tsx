@@ -6,6 +6,8 @@ jest.mock('expo-router', () => ({
   Tabs: Object.assign(() => null, { Screen: () => null }),
   Link: () => null,
 }));
+jest.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ session: null, signOut: jest.fn() }) }));
+jest.mock('@/features/auth/useMembership', () => ({ useMembership: () => ({ membership: null, loading: false }) }));
 
 import Welcome from '../app/(auth)/welcome';
 import NInicio from '../app/(app)/nurse/(tabs)/inicio';
