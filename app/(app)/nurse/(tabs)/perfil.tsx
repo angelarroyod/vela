@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Share } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
@@ -14,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 export default function NursePerfil() {
   const { session } = useAuth();
   const { membership } = useMembership();
+  const router = useRouter();
 
   const invite = async () => {
     if (!membership) {
@@ -78,8 +80,8 @@ export default function NursePerfil() {
           <Icon name="chevronRight" size={18} color={colors.chevron} strokeWidth={2.4} />
         </Pressable>
 
-        <Pressable style={s.signOut} accessibilityRole="button">
-          <Text style={s.signOutTxt}>Cerrar sesión</Text>
+        <Pressable style={s.signOut} accessibilityRole="button" onPress={() => router.push('/(app)/settings')}>
+          <Text style={s.signOutTxt}>Configuración</Text>
           <Icon name="chevronRight" size={18} color={colors.chevron} strokeWidth={2.4} />
         </Pressable>
       </ScrollView>

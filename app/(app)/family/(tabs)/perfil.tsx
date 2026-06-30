@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
 import { Avatar } from '@/components/Avatar';
@@ -9,6 +10,7 @@ import { colors, font, fontFamilyForWeight } from '@/theme';
 import { patient, careTeam, contacts } from '@/data';
 
 export default function FamilyPerfil() {
+  const router = useRouter();
   return (
     <Screen time="23:46" bg={colors.appBg}>
       <View style={s.header}>
@@ -68,6 +70,11 @@ export default function FamilyPerfil() {
             </View>
           ))}
         </Card>
+
+        <Pressable style={s.settings} accessibilityRole="button" onPress={() => router.push('/(app)/settings')}>
+          <Text style={s.settingsTxt}>Configuración</Text>
+          <Icon name="chevronRight" size={18} color={colors.chevron} strokeWidth={2.4} />
+        </Pressable>
       </ScrollView>
     </Screen>
   );
@@ -93,4 +100,6 @@ const s = StyleSheet.create({
   contactName: { fontFamily: fontFamilyForWeight(700), fontSize: 14, color: colors.ink },
   contactSub: { fontFamily: fontFamilyForWeight(500), fontSize: 12, color: colors.muted2 },
   callBtn: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  settings: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 18, padding: 16 },
+  settingsTxt: { fontFamily: fontFamilyForWeight(700), fontSize: 14, color: colors.ink },
 });
