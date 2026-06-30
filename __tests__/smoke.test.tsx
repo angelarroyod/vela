@@ -7,16 +7,16 @@ jest.mock('expo-router', () => ({
   Link: () => null,
 }));
 
-import Welcome from '../app/index';
-import NInicio from '../app/nurse/(tabs)/inicio';
-import NSignos from '../app/nurse/(tabs)/signos';
-import NRelevo from '../app/nurse/(tabs)/relevo';
-import NPerfil from '../app/nurse/(tabs)/perfil';
-import NMed from '../app/nurse/medicacion';
-import FInicio from '../app/family/(tabs)/inicio';
-import FAct from '../app/family/(tabs)/actividad';
-import FMsg from '../app/family/(tabs)/mensajes';
-import FPerfil from '../app/family/(tabs)/perfil';
+import Welcome from '../app/(auth)/welcome';
+import NInicio from '../app/(app)/nurse/(tabs)/inicio';
+import NSignos from '../app/(app)/nurse/(tabs)/signos';
+import NRelevo from '../app/(app)/nurse/(tabs)/relevo';
+import NPerfil from '../app/(app)/nurse/(tabs)/perfil';
+import NMed from '../app/(app)/nurse/medicacion';
+import FInicio from '../app/(app)/family/(tabs)/inicio';
+import FAct from '../app/(app)/family/(tabs)/actividad';
+import FMsg from '../app/(app)/family/(tabs)/mensajes';
+import FPerfil from '../app/(app)/family/(tabs)/perfil';
 
 test.each([
   ['Welcome', Welcome],

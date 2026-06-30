@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import Inicio from '../app/nurse/(tabs)/inicio';
-import Medicacion from '../app/nurse/medicacion';
-import Signos from '../app/nurse/(tabs)/signos';
-import Relevo from '../app/nurse/(tabs)/relevo';
+import Inicio from '../app/(app)/nurse/(tabs)/inicio';
+import Medicacion from '../app/(app)/nurse/medicacion';
+import Signos from '../app/(app)/nurse/(tabs)/signos';
+import Relevo from '../app/(app)/nurse/(tabs)/relevo';
 
 jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
 

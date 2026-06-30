@@ -9,6 +9,7 @@ import {
   HankenGrotesk_800ExtraBold,
 } from '@expo-google-fonts/hanken-grotesk';
 import { InstrumentSerif_400Regular } from '@expo-google-fonts/instrument-serif';
+import { AuthProvider } from '@/features/auth/AuthProvider';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -22,7 +23,9 @@ export default function RootLayout() {
   if (!loaded) return null;
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F1F5F2' } }} />
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F1F5F2' } }} />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

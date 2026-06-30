@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react-native';
-import Estado from '../app/family/(tabs)/inicio';
-import Actividad from '../app/family/(tabs)/actividad';
-import Mensajes from '../app/family/(tabs)/mensajes';
-import Perfil from '../app/family/(tabs)/perfil';
+import Estado from '../app/(app)/family/(tabs)/inicio';
+import Actividad from '../app/(app)/family/(tabs)/actividad';
+import Mensajes from '../app/(app)/family/(tabs)/mensajes';
+import Perfil from '../app/(app)/family/(tabs)/perfil';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
 
