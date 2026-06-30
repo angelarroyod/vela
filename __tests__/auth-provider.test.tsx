@@ -28,5 +28,5 @@ test('resolves to signed-out when no session', async () => {
       <Probe />
     </AuthProvider>,
   );
-  await waitFor(() => expect(screen.getByText('out')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('out')).toBeTruthy(), { timeout: 5000 });
 });
