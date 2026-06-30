@@ -1,14 +1,15 @@
 # Vela — Independent Nursing Care App (product design spec)
 
-**Date:** 2026-06-26 (rev 2 — full product scope)
+**Date:** 2026-06-26 (rev 3 — iOS delivery via Expo/EAS refined)
 **Source design:** Claude Design handoff `Vela.dc.html` (9-phone canvas).
-**Goal:** Ship a **complete, functional** home nursing-care app built to satisfy Apple App Store Review Guidelines, ready for TestFlight/submission via EAS.
+**Goal:** Ship a **complete, functional** home nursing-care app, **iOS-first**, built to satisfy Apple App Store Review Guidelines and delivered through Expo/EAS (TestFlight → App Store). Android is a parallel freebie from the same codebase.
 
 ## 0. Reality & constraints (read first)
 
 - **No approval guarantee.** Apple review is discretionary. This spec maximizes guideline compliance and prepares submission; it cannot promise acceptance.
-- **Windows dev host → no Xcode.** All iOS builds go through **EAS Build** (Expo cloud). No Mac required.
-- **Apple Developer Program not yet held.** We build + produce a TestFlight/submission-ready binary and metadata; the paid `eas submit` step is deferred until the user enrolls ($99/yr, 24–48h identity check).
+- **Windows dev host.** iOS binaries are produced by **EAS Build** (Expo cloud) — no Mac needed to *build* iOS. Local iOS builds / free-Apple-ID Xcode signing would need the Mac (mini incoming).
+- **Expo Go vs dev build.** Email/password auth + every M1/M3 screen run in **Expo Go** today (tested on the user's iPhone 17 Pro Max over LAN). **Sign in with Apple and push notifications need a custom dev build** (`eas build --profile development`) — they cannot run in Expo Go.
+- **Apple Developer Program ($99/yr) gates two things:** (a) signing + installing a **dev build on the physical iPhone** via EAS (device registration/provisioning, all from Windows), and (b) **TestFlight + `eas submit`**. Until enrolled: build email/password in Expo Go; a Mac with a free Apple ID is the alternative path for a personal on-device dev build. **Open decision:** enroll now to unblock on-device Apple auth/push, or defer and keep that work behind a flag.
 - **Secrets:** Supabase **anon** key ships in the app (public-safe; RLS is the security boundary). The **service-role** key never goes in the client — server-only (Edge Functions). No secrets committed to git.
 
 ## 1. Overview
@@ -119,16 +120,39 @@ Tokens, components, fidelity targets, and the nurse-Perfil gap resolution are un
 ## 10. Milestone roadmap
 
 - **M1 — Foundation:** Expo scaffold, theme, components, all 9 screens with real navigation + mock data placeholder. *Runnable on Windows (web + Expo Go).*
-- **M2 — Backend + auth:** Supabase project, schema + RLS migrations, email/password + Apple auth, onboarding, invite/join, account deletion.
+- **M2 — Backend + auth:** Supabase project, schema + RLS migrations, **email/password (Expo Go-testable now)** + onboarding, invite/join, account deletion. **Sign in with Apple** is coded here but runs only on the **iOS dev build** (see §11) — gated on Apple enrollment.
 - **M3 — Live data:** wire screens to Supabase, react-query, Realtime sync, entry forms (vitals/meds/messages/handoff).
 - **M4 — Compliance & polish:** privacy/consent/disclaimer, settings, push, states, accessibility, localization, icons/splash.
-- **M5 — Release prep:** bundle id, `app.json`, `eas.json` (dev/preview/production + submit placeholder), iOS EAS build, TestFlight + App Store Connect metadata/screenshots draft. **`eas submit` deferred** to user's Apple account.
+- **M5 — Release prep:** App Store Connect record, metadata/screenshots, production EAS build, TestFlight, `eas submit`. **Paid submission deferred** to Apple enrollment.
 
-## 11. Release engineering (M5 detail)
-- `app.json`: name "Vela", slug, bundle id `com.<owner>.vela`, icon/splash, `infoPlist` usage strings, `supportsTablet:false` (iPhone), `userInterfaceStyle`.
-- `eas.json`: build profiles; `production` for store; submit config stubbed (`ascAppId`, `appleTeamId` filled when enrolled).
-- Build: `eas build -p ios --profile production` (cloud). Distribute via TestFlight first.
-- App Store Connect: privacy answers, age rating, screenshots (from EAS build/simulator), review notes incl. demo credentials.
+## 11. iOS delivery via Expo/EAS
+
+Grounded in the Expo deployment + dev-client guides. All commands run from **Windows** (EAS builds in the cloud).
+
+**Prereqs (user actions):** Expo account (free) · Apple Developer Program ($99/yr) — required for on-device dev builds, TestFlight, and submit.
+
+### One-time EAS setup (start of M2)
+- `npm i -g eas-cli && eas login`; `npx eas-cli@latest init` → writes `extra.eas.projectId` + `owner` into `app.json`.
+- **`app.json` iOS:** `ios.bundleIdentifier` `com.vela.app`, `supportsTablet:false`, icon/splash, `ios.infoPlist.ITSAppUsesNonExemptEncryption:false`, usage strings as features land (`NSFaceIDUsageDescription` if biometric unlock, `NSPhotoLibraryUsageDescription` if avatar picker). Plugins: `expo-apple-authentication` (Sign in with Apple entitlement), `expo-notifications` (push).
+- **`eas.json` profiles:**
+  - `development` — `developmentClient:true`, `distribution:"internal"` (dev build for the iPhone).
+  - `preview` — internal release build for beta sanity checks.
+  - `production` — `autoIncrement:true`, `appVersionSource:"remote"`.
+  - `submit.production.ios` — `{ appleId, ascAppId, appleTeamId }`, filled at enrollment.
+- `eas credentials` → provision Apple signing; register the iPhone 17 Pro Max UDID for dev/internal distribution.
+
+### Dev loop (M2–M4, once native features exist)
+- `eas build -p ios --profile development --submit` → arrives in TestFlight (or internal link) → install on the iPhone → `npx expo start --dev-client` and connect over LAN. **This dev build replaces Expo Go** the moment Sign in with Apple / push are in. Email/password keeps working in plain Expo Go until then.
+
+### Beta (end of M4)
+- `eas build -p ios --profile production --submit` (or `npx testflight`) → TestFlight internal testers (you). Validate full nurse + family flows on-device.
+
+### Store (M5 — deferred to enrollment)
+- App Store Connect app record; App Privacy "nutrition labels" + age rating; screenshots; review notes incl. a demo account (nurse + family) so Apple can exercise both roles.
+- `eas submit -p ios`. Versions managed remotely (`eas build:version:get/set`).
+
+### Android (parallel, optional, no Mac)
+- Same EAS flow with `-p android`; Google Play Developer account ($25 one-time); tracks internal → production.
 
 ## 12. File structure (target)
 ```
