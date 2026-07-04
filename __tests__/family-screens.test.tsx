@@ -26,7 +26,7 @@ test('family actividad shows a feed action', () => {
 test('family mensajes shows the nurse and composer', () => {
   render(<Mensajes />);
   expect(screen.getByText('Carmen Morales')).toBeTruthy();
-  expect(screen.getByText('Escribe un mensaje…')).toBeTruthy();
+  expect(screen.getByPlaceholderText('Escribe un mensaje…')).toBeTruthy();
 });
 
 test('family perfil lists care team and allergy', () => {

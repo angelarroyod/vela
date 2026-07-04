@@ -1,10 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { colors, fontFamilyForWeight } from '@/theme';
-import { messages, nurse, type Message } from '@/data';
+import { nurse, type Message } from '@/data';
+import { useAuth } from '@/features/auth/useAuth';
+import { useMembership } from '@/features/auth/useMembership';
+import { useMessages } from '@/features/care/hooks';
+import { supabase } from '@/lib/supabase';
 
 function Bubble({ msg }: { msg: Message }) {
   if (msg.fromSelf) {
@@ -29,6 +34,18 @@ function Bubble({ msg }: { msg: Message }) {
 
 export default function FamilyMensajes() {
   const router = useRouter();
+  const { session } = useAuth();
+  const { membership } = useMembership();
+  const messages = useMessages(membership?.patient_id, session?.user.id ?? '');
+  const [draft, setDraft] = useState('');
+
+  const send = async () => {
+    if (!draft.trim() || !membership) return;
+    const body = draft.trim();
+    setDraft('');
+    await supabase.from('messages').insert({ patient_id: membership.patient_id, sender_id: session?.user.id, body });
+  };
+
   return (
     <Screen time="23:44" bg={colors.white}>
       <View style={s.header}>
@@ -53,12 +70,17 @@ export default function FamilyMensajes() {
       </ScrollView>
 
       <View style={s.composer}>
-        <View style={s.input}>
-          <Text style={s.placeholder}>Escribe un mensaje…</Text>
-        </View>
-        <View style={s.send}>
+        <TextInput
+          style={s.input}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Escribe un mensaje…"
+          placeholderTextColor={colors.muted3}
+          onSubmitEditing={send}
+        />
+        <Pressable style={s.send} onPress={send} accessibilityRole="button" accessibilityLabel="Enviar">
           <Icon name="send" size={20} color="#fff" strokeWidth={2} />
-        </View>
+        </Pressable>
       </View>
     </Screen>
   );
@@ -82,7 +104,6 @@ const s = StyleSheet.create({
   nurseTxt: { fontFamily: fontFamilyForWeight(500), fontSize: 14, color: '#3A4742', lineHeight: 20 },
   nurseMeta: { fontFamily: fontFamilyForWeight(600), fontSize: 10, color: colors.muted3, marginTop: 4 },
   composer: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.chatBorder, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16 },
-  input: { flex: 1, backgroundColor: colors.appBg, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 16 },
-  placeholder: { fontFamily: fontFamilyForWeight(500), fontSize: 14, color: colors.muted3 },
+  input: { flex: 1, backgroundColor: colors.appBg, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 16, fontFamily: fontFamilyForWeight(500), fontSize: 14, color: colors.ink },
   send: { width: 44, height: 44, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
 });
