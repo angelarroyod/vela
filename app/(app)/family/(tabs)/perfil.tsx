@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
@@ -64,9 +64,14 @@ export default function FamilyPerfil() {
                 <Text style={s.contactName}>{c.name}</Text>
                 <Text style={s.contactSub}>{c.sub}</Text>
               </View>
-              <View style={s.callBtn}>
+              <Pressable
+                style={s.callBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Llamar a ${c.name}`}
+                onPress={() => Linking.openURL('tel:')}
+              >
                 <Icon name="phone" size={18} color={colors.primaryDeep} strokeWidth={1.9} />
-              </View>
+              </Pressable>
             </View>
           ))}
         </Card>
