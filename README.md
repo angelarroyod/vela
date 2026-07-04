@@ -45,7 +45,7 @@ npm start          # Expo dev server (Metro)
 ## Quality gates
 
 ```bash
-npm test           # jest-expo + @testing-library/react-native (65 tests)
+npm test           # jest-expo + @testing-library/react-native (69 tests)
 npm run typecheck  # tsc --noEmit
 ```
 
@@ -82,5 +82,5 @@ docs/superpowers/    # design spec + implementation plans
 - **M1 — Foundation** ✅ screens, navigation, theme, mock data.
 - **M2 — Backend + auth** ✅ Supabase (Postgres + RLS), email/password + Sign in with Apple, onboarding, family invite/join, account deletion.
 - **M3 — Live data** ✅ screens wired to Supabase, realtime sync (family ⇄ nurse), real entry forms (vitals/meds/messages/handoff).
-- **M4 — Compliance & polish:** privacy/consent, push, settings, accessibility, localization, icons/splash.
+- **M4 — Polish (lean)** ✅ write-error handling, accessibility labels, in-app privacy + medical-disclaimer screen. **Deferred:** push (needs EAS dev build + Apple enrollment), app icon/splash (needs 1024px logo asset).
 - **M5 — Release prep:** bundle id, EAS config, iOS/Android builds, TestFlight + store metadata. (Paid submission deferred until Apple Developer enrollment; iOS production build via EAS cloud or a Mac.)
