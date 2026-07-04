@@ -3,7 +3,9 @@ import { Screen } from '@/components/Screen';
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { colors, fontFamilyForWeight } from '@/theme';
-import { activityFeed, type FeedEntry } from '@/data';
+import { type FeedEntry } from '@/data';
+import { useMembership } from '@/features/auth/useMembership';
+import { useCareEvents } from '@/features/care/hooks';
 
 function FeedCard({ entry }: { entry: FeedEntry }) {
   const anomaly = entry.tone === 'anomaly';
@@ -40,16 +42,20 @@ function FeedCard({ entry }: { entry: FeedEntry }) {
 }
 
 export default function FamilyActividad() {
+  const { membership } = useMembership();
+  const feed = useCareEvents(membership?.patient_id);
   return (
     <Screen time="23:43" bg={colors.appBg}>
       <View style={s.header}>
         <Text style={s.title}>Actividad</Text>
-        <Text style={s.sub}>Hoy · noche del 26 jun</Text>
+        <Text style={s.sub}>Hoy</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>
-        {activityFeed.map((e, i) => (
-          <FeedCard key={i} entry={e} />
-        ))}
+        {feed.length === 0 ? (
+          <Text style={s.empty}>Sin novedades aún.</Text>
+        ) : (
+          feed.map((e, i) => <FeedCard key={i} entry={e} />)
+        )}
       </ScrollView>
     </Screen>
   );
@@ -60,6 +66,7 @@ const s = StyleSheet.create({
   title: { fontFamily: fontFamilyForWeight(700), fontSize: 20, color: colors.ink },
   sub: { fontFamily: fontFamilyForWeight(500), fontSize: 13, color: colors.muted2, marginTop: 2 },
   content: { paddingHorizontal: 22, gap: 11, paddingBottom: 16 },
+  empty: { fontFamily: fontFamilyForWeight(500), fontSize: 14, color: colors.muted2, textAlign: 'center', marginTop: 40 },
   card: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 15 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   anomalyAvatar: { width: 32, height: 32, borderRadius: 999, backgroundColor: colors.anomalyAvatar, alignItems: 'center', justifyContent: 'center' },

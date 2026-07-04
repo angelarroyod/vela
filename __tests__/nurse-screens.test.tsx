@@ -6,6 +6,8 @@ import Signos from '../app/(app)/nurse/(tabs)/signos';
 import Relevo from '../app/(app)/nurse/(tabs)/relevo';
 
 jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
+jest.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ session: { user: { id: 'nurse1' } } }) }));
+jest.mock('@/features/auth/useMembership', () => ({ useMembership: () => ({ membership: { patient_id: 'p1', role: 'nurse' } }) }));
 
 beforeEach(() => {
   (useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), back: jest.fn(), replace: jest.fn() });
@@ -30,10 +32,10 @@ test('medicacion shows 4 de 5 progress', () => {
   expect(screen.getByText('4 de 5')).toBeTruthy();
 });
 
-test('signos shows the four vitals', () => {
+test('signos renders the vitals entry form', () => {
   render(<Signos />);
-  expect(screen.getByText('128/82')).toBeTruthy();
   expect(screen.getByText('Saturación O₂')).toBeTruthy();
+  expect(screen.getByPlaceholderText('120/80')).toBeTruthy();
 });
 
 test('relevo shows the anomaly entry', () => {

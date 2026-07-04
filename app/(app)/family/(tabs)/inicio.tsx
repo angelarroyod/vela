@@ -3,7 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '@/components/Screen';
 import { Avatar } from '@/components/Avatar';
 import { colors, font, fontFamilyForWeight } from '@/theme';
-import { family, nurse, vitals } from '@/data';
+import { family, nurse } from '@/data';
+import { useMembership } from '@/features/auth/useMembership';
+import { useVitals } from '@/features/care/hooks';
 
 function Glance({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -18,6 +20,8 @@ function Glance({ label, value, unit }: { label: string; value: string; unit?: s
 }
 
 export default function FamilyEstado() {
+  const { membership } = useMembership();
+  const v = useVitals(membership?.patient_id)[0];
   return (
     <Screen time="23:42" bg={colors.appBg}>
       <ScrollView contentContainerStyle={s.content}>
@@ -46,12 +50,12 @@ export default function FamilyEstado() {
         </LinearGradient>
 
         <View>
-          <Text style={s.vitalsTitle}>Últimos signos · {vitals.takenAt}</Text>
+          <Text style={s.vitalsTitle}>Últimos signos{v ? ` · ${v.takenAt}` : ''}</Text>
           <View style={s.grid}>
-            <Glance label="Presión" value={vitals.bp} />
-            <Glance label="Pulso" value={String(vitals.hr)} unit="lpm" />
-            <Glance label="Temperatura" value={vitals.tempC.toFixed(1)} unit="°C" />
-            <Glance label="Saturación" value={String(vitals.spo2)} unit="%" />
+            <Glance label="Presión" value={v ? v.bp : '—'} />
+            <Glance label="Pulso" value={v ? String(v.hr) : '—'} unit={v ? 'lpm' : undefined} />
+            <Glance label="Temperatura" value={v ? v.tempC.toFixed(1) : '—'} unit={v ? '°C' : undefined} />
+            <Glance label="Saturación" value={v ? String(v.spo2) : '—'} unit={v ? '%' : undefined} />
           </View>
         </View>
       </ScrollView>

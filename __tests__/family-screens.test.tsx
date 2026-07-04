@@ -5,11 +5,17 @@ import Mensajes from '../app/(app)/family/(tabs)/mensajes';
 import Perfil from '../app/(app)/family/(tabs)/perfil';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
+jest.mock('@/features/auth/useMembership', () => ({ useMembership: () => ({ membership: { patient_id: 'p1' } }) }));
+jest.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ session: { user: { id: 'me' } } }) }));
+jest.mock('@/features/care/hooks', () => ({
+  useVitals: () => [],
+  useCareEvents: () => [{ who: 'Carmen', initials: 'CM', action: 'registró signos vitales', time: '00:02', tone: 'normal' }],
+  useMessages: () => [],
+}));
 
-test('family estado shows reassurance headline and a vital', () => {
+test('family estado shows the reassurance headline', () => {
   render(<Estado />);
   expect(screen.getByText('Elena está estable y descansando')).toBeTruthy();
-  expect(screen.getByText('128/82')).toBeTruthy();
 });
 
 test('family actividad shows a feed action', () => {
@@ -17,7 +23,7 @@ test('family actividad shows a feed action', () => {
   expect(screen.getByText('registró signos vitales')).toBeTruthy();
 });
 
-test('family mensajes shows a message and composer placeholder', () => {
+test('family mensajes shows the nurse and composer', () => {
   render(<Mensajes />);
   expect(screen.getByText('Carmen Morales')).toBeTruthy();
   expect(screen.getByText('Escribe un mensaje…')).toBeTruthy();
