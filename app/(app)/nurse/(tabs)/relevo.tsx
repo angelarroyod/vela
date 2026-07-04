@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import { useMembership } from '@/features/auth/useMembership';
 import { useTimeline } from '@/features/care/hooks';
 import { supabase } from '@/lib/supabase';
+import { mutate } from '@/lib/db';
 
 function Entry({ entry, last }: { entry: TimelineEntry; last: boolean }) {
   const anomaly = entry.tone === 'anomaly';
@@ -48,10 +49,11 @@ export default function NurseRelevo() {
         text: 'Entregar',
         onPress: async () => {
           if (membership) {
-            await supabase.from('shift_handoffs').insert({
+            const err = await mutate(supabase.from('shift_handoffs').insert({
               patient_id: membership.patient_id, nurse_id: session?.user.id,
               summary: 'Turno sin novedades relevantes.', recommendation, ended_at: new Date().toISOString(),
-            });
+            }));
+            if (err) { Alert.alert('No se pudo entregar el turno', err); return; }
           }
           router.replace('/nurse/inicio');
         },

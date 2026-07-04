@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Icon } from '@/components/Icon';
@@ -8,6 +8,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import { useMembership } from '@/features/auth/useMembership';
 import { useMedications } from '@/features/care/hooks';
 import { supabase } from '@/lib/supabase';
+import { mutate } from '@/lib/db';
 
 function MedRow({ med, onPress }: { med: Medication; onPress?: () => void }) {
   const pending = med.status === 'pending';
@@ -52,14 +53,17 @@ export default function NurseMedicacion() {
 
   const administer = async (m: Medication) => {
     if (!m.id || !membership) return;
-    await supabase
-      .from('medications')
-      .update({ status: 'administered', administered_by: session?.user.id, administered_at: new Date().toISOString() })
-      .eq('id', m.id);
-    await supabase.from('care_events').insert({
+    const err = await mutate(
+      supabase
+        .from('medications')
+        .update({ status: 'administered', administered_by: session?.user.id, administered_at: new Date().toISOString() })
+        .eq('id', m.id),
+    );
+    if (err) { Alert.alert('No se pudo registrar la dosis', err); return; }
+    await mutate(supabase.from('care_events').insert({
       patient_id: membership.patient_id, author_id: session?.user.id, type: 'medication',
       title: 'Medicación administrada', body: `${m.name} ${m.dose}`, severity: 'info',
-    });
+    }));
   };
 
   return (

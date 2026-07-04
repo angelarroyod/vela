@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Avatar } from '@/components/Avatar';
@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import { useMembership } from '@/features/auth/useMembership';
 import { useMessages } from '@/features/care/hooks';
 import { supabase } from '@/lib/supabase';
+import { mutate } from '@/lib/db';
 
 function Bubble({ msg }: { msg: Message }) {
   if (msg.fromSelf) {
@@ -43,7 +44,8 @@ export default function FamilyMensajes() {
     if (!draft.trim() || !membership) return;
     const body = draft.trim();
     setDraft('');
-    await supabase.from('messages').insert({ patient_id: membership.patient_id, sender_id: session?.user.id, body });
+    const err = await mutate(supabase.from('messages').insert({ patient_id: membership.patient_id, sender_id: session?.user.id, body }));
+    if (err) { setDraft(body); Alert.alert('No se pudo enviar', err); }
   };
 
   return (

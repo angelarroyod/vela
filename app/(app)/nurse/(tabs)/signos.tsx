@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon';
 import { useAuth } from '@/features/auth/useAuth';
 import { useMembership } from '@/features/auth/useMembership';
 import { supabase } from '@/lib/supabase';
+import { mutate } from '@/lib/db';
 import { colors, fontFamilyForWeight } from '@/theme';
 import { patient } from '@/data';
 
@@ -49,16 +50,17 @@ export default function NurseSignos() {
     if (!membership) return;
     setBusy(true);
     const [sys, dia] = bp.split('/').map((n) => parseInt(n, 10));
-    await supabase.from('vitals').insert({
+    const err = await mutate(supabase.from('vitals').insert({
       patient_id: membership.patient_id, recorded_by: session?.user.id,
       bp_sys: sys, bp_dia: dia, hr: Number(hr), temp_c: Number(temp), spo2: Number(spo2),
       note, has_anomaly: anomaly,
-    });
-    await supabase.from('care_events').insert({
+    }));
+    if (err) { setBusy(false); Alert.alert('No se pudo guardar', err); return; }
+    await mutate(supabase.from('care_events').insert({
       patient_id: membership.patient_id, author_id: session?.user.id, type: 'vitals',
       title: 'Signos vitales', body: `PA ${bp} · FC ${hr} · ${temp}° · SpO₂ ${spo2}%`,
       severity: anomaly ? 'warning' : 'info',
-    });
+    }));
     setBusy(false);
     router.back();
   };
