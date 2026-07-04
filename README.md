@@ -7,13 +7,15 @@ Home nursing-care app with two roles sharing one app:
 
 Built with **Expo (React Native + TypeScript)** and **expo-router**. Cross-platform — the same code runs on iOS and Android.
 
-> Spanish-language UI. Screen *content* is still **static mock data** (`src/data.ts`); wiring screens to live data, realtime sync, and push arrive in M3–M4.
+> Spanish-language UI. Backend is **live** (Supabase). Push notifications + full compliance polish arrive in M4.
 
-## Status — M1 (foundation) + M2 (backend + auth) complete
+## Status — M1 + M2 + M3 complete (backend live)
 
-**M2 added:** Supabase client + session storage, full schema + RLS migrations, email/password auth (Expo Go-testable), onboarding (nurse creates patient / family redeems an invite code), `(auth)`/`(app)` route groups with session+role routing, family invite generation, Settings with sign out + account deletion (Edge Function), and Sign in with Apple behind a native-build flag. See [M2 plan](docs/superpowers/plans/2026-06-26-vela-m2-backend-auth.md).
+**M3 added:** screens read/write **live Supabase data** via one `useLiveList` realtime hook + per-resource hooks. Nurse writes vitals (Signos), administers meds, hands off shift; family sees the activity feed, latest vitals, and chats — syncing in realtime (family ⇄ nurse). See [M3 plan](docs/superpowers/plans/2026-07-03-vela-m3-live-data.md). *(No react-query — supabase-js realtime covers it.)*
 
-> **M2 live-DB steps still pending a Supabase project:** apply `supabase/migrations/0001_schema.sql` + `0002_rls.sql`, deploy `supabase/functions/delete-account`, and set `.env`. Email/password is fully testable in Expo Go once `.env` is set; Sign in with Apple needs the EAS dev build + Apple enrollment (spec §11).
+**M2:** Supabase client + session storage, schema + RLS migrations, email/password auth, onboarding, `(auth)`/`(app)` route groups, invite generation, Settings + account deletion (Edge Function), Sign in with Apple behind a native-build flag. See [M2 plan](docs/superpowers/plans/2026-06-26-vela-m2-backend-auth.md).
+
+> Live now: Supabase project + migrations applied + `.env` set; email/password + onboarding verified on device. Still pending: deploy `supabase/functions/delete-account`; Sign in with Apple needs the EAS dev build + Apple enrollment (spec §11).
 
 **M1 screens** — all 9, built and navigable with mock data:
 
@@ -43,7 +45,7 @@ npm start          # Expo dev server (Metro)
 ## Quality gates
 
 ```bash
-npm test           # jest-expo + @testing-library/react-native (55 tests)
+npm test           # jest-expo + @testing-library/react-native (65 tests)
 npm run typecheck  # tsc --noEmit
 ```
 
@@ -78,7 +80,7 @@ docs/superpowers/    # design spec + implementation plans
 ## Roadmap
 
 - **M1 — Foundation** ✅ screens, navigation, theme, mock data.
-- **M2 — Backend + auth** ✅ Supabase (Postgres + RLS), email/password + Sign in with Apple, onboarding, family invite/join, account deletion. *(Apply migrations + set `.env` to go live.)*
-- **M3 — Live data:** wire screens to Supabase, realtime sync (family ⇄ nurse), real entry forms (vitals/meds/messages/handoff).
+- **M2 — Backend + auth** ✅ Supabase (Postgres + RLS), email/password + Sign in with Apple, onboarding, family invite/join, account deletion.
+- **M3 — Live data** ✅ screens wired to Supabase, realtime sync (family ⇄ nurse), real entry forms (vitals/meds/messages/handoff).
 - **M4 — Compliance & polish:** privacy/consent, push, settings, accessibility, localization, icons/splash.
 - **M5 — Release prep:** bundle id, EAS config, iOS/Android builds, TestFlight + store metadata. (Paid submission deferred until Apple Developer enrollment; iOS production build via EAS cloud or a Mac.)

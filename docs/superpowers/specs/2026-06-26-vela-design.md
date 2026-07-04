@@ -121,7 +121,7 @@ Tokens, components, fidelity targets, and the nurse-Perfil gap resolution are un
 
 - **M1 — Foundation:** Expo scaffold, theme, components, all 9 screens with real navigation + mock data placeholder. *Runnable on Windows (web + Expo Go).*
 - **M2 — Backend + auth** ✅ *(code complete; live once a Supabase project + `.env` exist)*: Supabase client + schema + RLS migrations, **email/password (Expo Go-testable)** + onboarding, invite/join, account deletion (Edge Function). **Sign in with Apple** coded but runs only on the **iOS dev build** (see §11) — gated on Apple enrollment.
-- **M3 — Live data:** wire screens to Supabase, react-query, Realtime sync, entry forms (vitals/meds/messages/handoff).
+- **M3 — Live data** ✅ screens wired to Supabase via a `useLiveList` realtime hook, family⇄nurse sync, entry forms (vitals/meds/messages/handoff). *(Skipped react-query — supabase-js realtime sufficed.)*
 - **M4 — Compliance & polish:** privacy/consent/disclaimer, settings, push, states, accessibility, localization, icons/splash.
 - **M5 — Release prep:** App Store Connect record, metadata/screenshots, production EAS build, TestFlight, `eas submit`. **Paid submission deferred** to Apple enrollment.
 
