@@ -3,15 +3,20 @@ import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { Icon } from '@/components/Icon';
 import { colors, fontFamilyForWeight } from '@/theme';
-import { medications, medsProgress, type Medication } from '@/data';
+import { type Medication } from '@/data';
+import { useAuth } from '@/features/auth/useAuth';
+import { useMembership } from '@/features/auth/useMembership';
+import { useMedications } from '@/features/care/hooks';
+import { supabase } from '@/lib/supabase';
 
-function MedRow({ med }: { med: Medication }) {
+function MedRow({ med, onPress }: { med: Medication; onPress?: () => void }) {
   const pending = med.status === 'pending';
   return (
-    <View
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
       style={[
         s.med,
-        med.highlight && { backgroundColor: colors.mint3, borderColor: colors.onGreenSub },
         pending && { borderStyle: 'dashed', borderColor: colors.dashed },
       ]}
     >
@@ -32,13 +37,31 @@ function MedRow({ med }: { med: Medication }) {
         <Text style={s.medTime}>{med.time}</Text>
         <Text style={[s.medSub, { color: pending ? colors.amber : colors.primary }]}>{med.sub}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function NurseMedicacion() {
   const router = useRouter();
-  const pct = Math.round((medsProgress.done / medsProgress.total) * 100);
+  const { session } = useAuth();
+  const { membership } = useMembership();
+  const meds = useMedications(membership?.patient_id);
+  const done = meds.filter((m) => m.status === 'administered').length;
+  const total = meds.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  const administer = async (m: Medication) => {
+    if (!m.id || !membership) return;
+    await supabase
+      .from('medications')
+      .update({ status: 'administered', administered_by: session?.user.id, administered_at: new Date().toISOString() })
+      .eq('id', m.id);
+    await supabase.from('care_events').insert({
+      patient_id: membership.patient_id, author_id: session?.user.id, type: 'medication',
+      title: 'Medicación administrada', body: `${m.name} ${m.dose}`, severity: 'info',
+    });
+  };
+
   return (
     <Screen time="23:44" bg={colors.appBg}>
       <View style={s.header}>
@@ -56,7 +79,7 @@ export default function NurseMedicacion() {
           <View style={s.progressHead}>
             <Text style={s.progressTitle}>Dosis de hoy</Text>
             <Text style={s.progressCount}>
-              {medsProgress.done} de {medsProgress.total}
+              {done} de {total}
             </Text>
           </View>
           <View style={s.track}>
@@ -64,8 +87,8 @@ export default function NurseMedicacion() {
           </View>
         </View>
 
-        {medications.map((m) => (
-          <MedRow key={m.name} med={m} />
+        {meds.map((m) => (
+          <MedRow key={m.id ?? m.name} med={m} onPress={m.status === 'pending' ? () => administer(m) : undefined} />
         ))}
 
         <View style={s.footer}>

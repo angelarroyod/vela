@@ -8,6 +8,12 @@ import Relevo from '../app/(app)/nurse/(tabs)/relevo';
 jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
 jest.mock('@/features/auth/useAuth', () => ({ useAuth: () => ({ session: { user: { id: 'nurse1' } } }) }));
 jest.mock('@/features/auth/useMembership', () => ({ useMembership: () => ({ membership: { patient_id: 'p1', role: 'nurse' } }) }));
+jest.mock('@/features/care/hooks', () => ({
+  useMedications: () => [
+    { id: 'a', name: 'Amlodipino', dose: '5 mg', reason: 'PA', time: '08:00', status: 'administered', sub: 'Administrada' },
+    { id: 'b', name: 'Levotiroxina', dose: '50 mcg', reason: 'Tiroides', time: '06:00', status: 'pending', sub: 'Próxima' },
+  ],
+}));
 
 beforeEach(() => {
   (useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), back: jest.fn(), replace: jest.fn() });
@@ -27,9 +33,9 @@ test('inicio pushes medicacion from the med task', () => {
   expect(push).toHaveBeenCalledWith('/nurse/medicacion');
 });
 
-test('medicacion shows 4 de 5 progress', () => {
+test('medicacion shows progress derived from live meds', () => {
   render(<Medicacion />);
-  expect(screen.getByText('4 de 5')).toBeTruthy();
+  expect(screen.getByText('1 de 2')).toBeTruthy();
 });
 
 test('signos renders the vitals entry form', () => {
