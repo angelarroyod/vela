@@ -4,7 +4,11 @@ import { Screen } from '@/components/Screen';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Icon } from '@/components/Icon';
 import { colors, fontFamilyForWeight } from '@/theme';
-import { relevoTimeline, recommendation, type TimelineEntry } from '@/data';
+import { recommendation, type TimelineEntry } from '@/data';
+import { useAuth } from '@/features/auth/useAuth';
+import { useMembership } from '@/features/auth/useMembership';
+import { useTimeline } from '@/features/care/hooks';
+import { supabase } from '@/lib/supabase';
 
 function Entry({ entry, last }: { entry: TimelineEntry; last: boolean }) {
   const anomaly = entry.tone === 'anomaly';
@@ -34,10 +38,24 @@ function Entry({ entry, last }: { entry: TimelineEntry; last: boolean }) {
 
 export default function NurseRelevo() {
   const router = useRouter();
+  const { session } = useAuth();
+  const { membership } = useMembership();
+  const timeline = useTimeline(membership?.patient_id);
   const handover = () => {
     Alert.alert('Entregar turno', '¿Entregar el turno al equipo de día?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Entregar', onPress: () => router.replace('/nurse/inicio') },
+      {
+        text: 'Entregar',
+        onPress: async () => {
+          if (membership) {
+            await supabase.from('shift_handoffs').insert({
+              patient_id: membership.patient_id, nurse_id: session?.user.id,
+              summary: 'Turno sin novedades relevantes.', recommendation, ended_at: new Date().toISOString(),
+            });
+          }
+          router.replace('/nurse/inicio');
+        },
+      },
     ]);
   };
   return (
@@ -49,8 +67,8 @@ export default function NurseRelevo() {
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.timeline}>
           <View style={s.line} />
-          {relevoTimeline.map((e, i) => (
-            <Entry key={e.title} entry={e} last={i === relevoTimeline.length - 1} />
+          {timeline.map((e, i) => (
+            <Entry key={i} entry={e} last={i === timeline.length - 1} />
           ))}
         </View>
 

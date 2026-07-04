@@ -13,6 +13,7 @@ jest.mock('@/features/care/hooks', () => ({
     { id: 'a', name: 'Amlodipino', dose: '5 mg', reason: 'PA', time: '08:00', status: 'administered', sub: 'Administrada' },
     { id: 'b', name: 'Levotiroxina', dose: '50 mcg', reason: 'Tiroides', time: '06:00', status: 'pending', sub: 'Próxima' },
   ],
+  useTimeline: () => [{ title: 'Anomalía leve', time: '01:15', body: 'Tos seca', tone: 'anomaly' }],
 }));
 
 beforeEach(() => {
