@@ -54,6 +54,11 @@ export default function Settings() {
           <Text style={s.email}>{session?.user.email ?? '—'}</Text>
         </Card>
 
+        <Pressable style={s.row} onPress={() => router.push('/(app)/legal')} accessibilityRole="button">
+          <Text style={s.rowTxt}>Privacidad y aviso médico</Text>
+          <Icon name="chevronRight" size={18} color={colors.chevron} strokeWidth={2.4} />
+        </Pressable>
+
         <Pressable style={s.row} onPress={doSignOut} accessibilityRole="button">
           <Text style={s.rowTxt}>Cerrar sesión</Text>
           <Icon name="chevronRight" size={18} color={colors.chevron} strokeWidth={2.4} />
