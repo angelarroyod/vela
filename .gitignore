@@ -50,3 +50,6 @@ yarn-error.*
 # agent skills installed via npx (reinstallable)
 .agents/
 skills-lock.json
+
+# local MCP config (contains your own Supabase project_ref)
+.mcp.json

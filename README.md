@@ -1,4 +1,6 @@
-# Vela — Independent Nursing Care App
+# Vela — Independent Nursing Care App (mobile)
+
+> **Looking for the web app?** → **[vela-web](https://github.com/angelarroyod/vela-web)** — the React + Vite desktop version, runs with `docker compose up`. It's the easiest way to try Vela. This repo is the **React Native / Expo mobile** companion on the same Supabase backend (same accounts, same data, realtime across both).
 
 Home nursing-care app with two roles sharing one app:
 

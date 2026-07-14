@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-Desktop layout: a 252px **sidebar** (logo, patient mini-card, role nav, shift card + user + sign-out) beside a **main** area (topbar + max-1120px content). Same product as mobile — role-scoped access via `care_memberships`, live vitals/meds/messages/handoff, realtime family⇄nurse. Separate codebase from the Expo app; **shared database** (project `tcjrdiukrgqgqmdbljpa`, same tables/RLS/RPCs — no backend work).
+Desktop layout: a 252px **sidebar** (logo, patient mini-card, role nav, shift card + user + sign-out) beside a **main** area (topbar + max-1120px content). Same product as mobile — role-scoped access via `care_memberships`, live vitals/meds/messages/handoff, realtime family⇄nurse. Separate codebase from the Expo app; **shared database** (project `<your-project-ref>`, same tables/RLS/RPCs — no backend work).
 
 ### In scope
 Auth (email/password + onboarding), the 8 content views (nurse: Inicio, Signos, Medicación, Relevo; family: Estado, Actividad, Mensajes, Perfil), sidebar shell, live reads + writes, realtime.
