@@ -46,3 +46,7 @@ yarn-error.*
 !.env.example
 
 /dist
+
+# agent skills installed via npx (reinstallable)
+.agents/
+skills-lock.json
